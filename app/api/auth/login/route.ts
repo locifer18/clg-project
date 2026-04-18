@@ -224,7 +224,7 @@ export async function POST(req: Request) {
         role: user.role,
       },
       accessToken, // Also return tokens in body for SPA
-      refreshToken,
+      // refreshToken,
     });
 
     // ✅ Set access token cookie (15 minutes)

@@ -1,185 +1,64 @@
 "use client";
 
 import { useState } from "react";
+import AuthInput from "@/components/(auth)/AuthInput";
+import { useRegister } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const [step, setStep] = useState<"register" | "otp">("register");
+  const router = useRouter();
+  const { mutate: registerUser, isPending } = useRegister();
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    phone: "",
+    confirmPassword: "",
   });
 
-  const [otp, setOtp] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  // 🧠 handle input
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // 🚀 REGISTER
-  const handleRegister = async () => {
-    try {
-      setLoading(true);
-      setMessage("");
-
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.error || data.message);
-        return;
-      }
-
-      setMessage("Account created ✅ Sending OTP...");
-
-      // 👉 send OTP after register
-      await fetch("/api/auth/otp/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email,
-          type: "EMAIL_VERIFICATION",
-        }),
-      });
-
-      setStep("otp");
-
-    } catch (err) {
-      setMessage("Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 🔐 VERIFY OTP
-  const handleVerifyOtp = async () => {
-    try {
-      setLoading(true);
-      setMessage("");
-
-      const res = await fetch("/api/auth/otp/verify-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email,
-          code: otp,
-          type: "EMAIL_VERIFICATION",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.message);
-        return;
-      }
-
-      setMessage("Email verified 🎉 You can login now");
-
-    } catch (err) {
-      setMessage("OTP verification failed");
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = () => {
+    registerUser(form, {
+      onSuccess: (res: any) => {
+        alert(res.message);
+        router.push("/login");
+      },
+      onError: (err: any) => {
+        alert(err.response?.data?.message);
+      },
+    });
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 text-black">
-      <div className="bg-white p-6 rounded-xl shadow w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md space-y-5">
+        <h2 className="text-2xl font-bold text-center">Create Account</h2>
 
-        <h1 className="text-2xl font-bold text-center mb-4">
-          Register 🚀
-        </h1>
+        <AuthInput label="Name" name="name" value={form.name} onChange={handleChange} />
+        <AuthInput label="Email" name="email" value={form.email} onChange={handleChange} />
+        <AuthInput label="Password" type="password" name="password" value={form.password} onChange={handleChange} />
+        <AuthInput label="Confirm Password" type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} />
 
-        {/* STEP 1: REGISTER */}
-        {step === "register" && (
-          <>
-            <input
-              name="name"
-              placeholder="Full Name"
-              className="w-full border p-2 rounded mb-3"
-              onChange={handleChange}
-            />
+        <button
+          onClick={handleSubmit}
+          disabled={isPending}
+          className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition"
+        >
+          {isPending ? "Creating..." : "Register"}
+        </button>
 
-            <input
-              name="email"
-              placeholder="Email"
-              className="w-full border p-2 rounded mb-3"
-              onChange={handleChange}
-            />
-
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              className="w-full border p-2 rounded mb-3"
-              onChange={handleChange}
-            />
-
-            <input
-              name="phone"
-              placeholder="Phone (optional)"
-              className="w-full border p-2 rounded mb-4"
-              onChange={handleChange}
-            />
-
-            <button
-              onClick={handleRegister}
-              disabled={loading}
-              className="w-full bg-black text-white py-2 rounded"
-            >
-              {loading ? "Creating..." : "Create Account"}
-            </button>
-          </>
-        )}
-
-        {/* STEP 2: OTP */}
-        {step === "otp" && (
-          <>
-            <p className="text-sm text-gray-600 mb-2">
-              OTP sent to {form.email}
-            </p>
-
-            <input
-              placeholder="Enter OTP"
-              className="w-full border p-2 rounded mb-4"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-            />
-
-            <button
-              onClick={handleVerifyOtp}
-              disabled={loading}
-              className="w-full bg-black text-white py-2 rounded"
-            >
-              {loading ? "Verifying..." : "Verify Email"}
-            </button>
-          </>
-        )}
-
-        {/* MESSAGE */}
-        {message && (
-          <p className="text-center text-sm mt-4 text-red-500">
-            {message}
-          </p>
-        )}
+        <p className="text-sm text-center">
+          Already have an account?{" "}
+          <span
+            onClick={() => router.push("/login")}
+            className="text-indigo-600 cursor-pointer"
+          >
+            Login
+          </span>
+        </p>
       </div>
     </div>
   );

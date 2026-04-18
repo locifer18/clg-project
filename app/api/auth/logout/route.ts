@@ -1,5 +1,3 @@
-// api/auth/logout-UPDATED.ts
-// ⚠️ REPLACES your current logout endpoint
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { deleteSession } from "@/lib/session";

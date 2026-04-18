@@ -1,12 +1,20 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../[...nextauth]/route";
+import { NextResponse } from "next/server";
+import { getUser } from "@/lib/auth";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const user = await getUser();
 
-  if (!session) {
-    return new Response("Unauthorized", { status: 401 });
+  if (!user) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
-  return Response.json(session.user);
+  const { password, ...safeUser } = user;
+
+  return NextResponse.json({
+    success: true,
+    user: safeUser,
+  });
 }
