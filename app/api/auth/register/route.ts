@@ -30,13 +30,13 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const validation = registerSchema.safeParse(body);
-    
+
     if (!validation.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "Validation Error", 
-          error: validation.error.issues[0].message 
+        {
+          success: false,
+          message: "Validation Error",
+          error: validation.error.issues[0].message
         },
         { status: 400 }
       );
@@ -45,13 +45,25 @@ export async function POST(request: Request) {
     const { name, email, password, phone } = validation.data;
 
     // ✅ Check if user already exists
-    const existingUser = await prisma.user.findUnique({ 
+    const existingUser = await prisma.user.findUnique({
       where: { email },
       select: { id: true }, // Only select id for performance
     });
 
     if (existingUser) {
-      // Don't reveal if email exists (security best practice)
+      if (!existingUser.emailVerified) {
+
+        // delete old OTPs
+        await prisma.otpToken.deleteMany({
+          where: { email, type: "EMAIL_VERIFICATION" },
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Account exists but not verified. OTP sent again.",
+          nextStep: "EMAIL_VERIFICATION",
+        });
+      }
       return NextResponse.json(
         { success: false, message: "Registration failed. Please try again." },
         { status: 409 }
@@ -75,8 +87,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         message: "Registration successful. Please verify your email.",
         nextStep: "EMAIL_VERIFICATION", // Hint for frontend
       },

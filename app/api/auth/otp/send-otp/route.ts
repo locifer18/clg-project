@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import sendEmail from "@/lib/nodemailer";
 import { getOTPTemplate } from "@/lib/templates";
 import { prisma } from "@/lib/db";
 import { hashOtp } from "@/lib/otp";
+import { sendEmail } from "@/lib/nodemailer";
 
 const sendOtpSchema = z.object({
   email: z.string().email("Invalid email address").toLowerCase(),
@@ -81,7 +81,6 @@ export async function POST(request: Request) {
     // ✅ Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
     // ✅ Hash OTP before storing
     const hashedOtp = hashOtp(otp);
 
@@ -101,7 +100,7 @@ export async function POST(request: Request) {
     
     const htmlTemplate = getOTPTemplate(otp, type);
     
-    const emailSent = await sendEmail(email, subject, htmlTemplate);
+    const emailSent = await sendEmail(email, subject, htmlTemplate.html);
 
     if (!emailSent) {
       // Still return success to avoid revealing backend issues

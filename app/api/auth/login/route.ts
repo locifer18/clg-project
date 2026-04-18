@@ -1,5 +1,3 @@
-// api/auth/login-UPDATED.ts
-// ⚠️ REPLACES your current login endpoint
 import { prisma } from "@/lib/db";
 import { verifyOtp, checkOtpAttempts, recordOtpAttempt, resetOtpAttempts } from "@/lib/otp";
 import { signToken } from "@/lib/jwt";

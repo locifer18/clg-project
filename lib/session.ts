@@ -1,10 +1,9 @@
 // lib/session.ts
 import { prisma } from "./db";
-import { jwtDecode } from "jwt-decode";
 
 export interface SessionData {
   userId: string;
-  token: string;
+  accessToken: string;
   userAgent?: string;
   ipAddress?: string;
   expiresAt: Date;
@@ -15,7 +14,7 @@ export interface SessionData {
  */
 export async function createSession(
   userId: string,
-  token: string,
+  accessToken: string,
   options?: {
     userAgent?: string;
     ipAddress?: string;
@@ -26,7 +25,7 @@ export async function createSession(
     const session = await prisma.session.create({
       data: {
         userId,
-        token,
+        accessToken,
         userAgent: options?.userAgent,
         ipAddress: options?.ipAddress,
         expiresAt: options?.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -41,12 +40,12 @@ export async function createSession(
 }
 
 /**
- * Get session by token
+ * Get session by accessToken
  */
-export async function getSessionByToken(token: string): Promise<any | null> {
+export async function getSessionByToken(accessToken: string): Promise<any | null> {
   try {
     const session = await prisma.session.findUnique({
-      where: { token },
+      where: { accessToken },
       include: { user: { select: { id: true, email: true, role: true } } },
     });
 
@@ -74,7 +73,7 @@ export async function getUserSessions(userId: string): Promise<any[]> {
       where: { userId },
       select: {
         id: true,
-        token: true,
+        accessToken: true,
         userAgent: true,
         ipAddress: true,
         createdAt: true,

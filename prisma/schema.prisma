@@ -54,10 +54,10 @@ model User {
     email         String     @unique
     password      String?
     image         String?
-    phone         String
-    answer        String
+    phone         String?
+    answer        String?
     role          Role       @default(CUSTOMER)
-    emailVerified DateTime
+    emailVerified DateTime?
     tokenVersion  Int        @default(0)
     lastLoginAt   DateTime?
     loginAttempts Int        @default(0)
@@ -70,6 +70,7 @@ model User {
     loginLogs     LoginLog[]
     createdAt     DateTime   @default(now())
     updatedAt     DateTime   @updatedAt
+    sessions      Session[]
 }
 
 model LoginLog {
@@ -88,6 +89,25 @@ model LoginLog {
     @@index([userId])
     @@index([email])
     @@index([createdAt])
+}
+
+model Session {
+    id     String @id @default(cuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    accessToken  String  @unique
+    refreshToken String? @unique
+
+    ipAddress String?
+    userAgent String?
+
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId])
+    @@index([expiresAt])
 }
 
 model OtpToken {
