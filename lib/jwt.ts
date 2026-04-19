@@ -1,23 +1,16 @@
 // lib/jwt.ts
-import jwt from 'jsonwebtoken';
+import { TokenPayload } from '@/types';
+import jwt, { Secret } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  role: string;
-  sessionId?: string;
-  tokenVersion?: number;
-}
 
 /**
  * Sign a JWT token
  */
 export function signToken(payload: TokenPayload): string {
   try {
-    const token = jwt.sign(payload, JWT_SECRET, {
+    const token = jwt.sign(payload, JWT_SECRET as Secret, {
       expiresIn: JWT_EXPIRY,
       algorithm: 'HS256',
     });

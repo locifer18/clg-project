@@ -1,4 +1,5 @@
 // lib/errors.ts
+import { ApiResponse } from '@/types';
 import { NextResponse } from 'next/server';
 
 /**
@@ -63,17 +64,6 @@ export class InternalServerError extends AppError {
         super(500, message, 'INTERNAL_SERVER_ERROR');
         this.name = 'InternalServerError';
     }
-}
-
-/**
- * Standard API response format
- */
-export interface ApiResponse<T = any> {
-    success: boolean;
-    message: string;
-    data?: T;
-    error?: string;
-    code?: string;
 }
 
 /**

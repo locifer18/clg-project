@@ -69,6 +69,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: emailSchema,
   code: otpSchema,
+  password: passwordSchema,
 });
 
 export const sendOtpSchema = z.object({
@@ -108,7 +109,7 @@ export const resetPasswordSchema = z.object({
  * Validate request body
  * Usage: const result = validateBody(schema, body);
  */
-export async function validateBody<T>(schema: z.ZodSchema, data: unknown): Promise<{ success: boolean; data?: T; error?: string }> {
+export async function validateBody<T extends z.ZodTypeAny>(schema: T, data: unknown): Promise<{ success: boolean; data?: z.infer<T>; error?: string }> {
   try {
     const validated = schema.parse(data);
     return { success: true, data: validated };
