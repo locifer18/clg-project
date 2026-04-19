@@ -1,12 +1,13 @@
 "use client";
 
 import QueryProvider from "@/components/(common)/QueryProvider";
-import { SessionProvider } from "next-auth/react";
+import { Toaster } from "sonner";
 
 export default function Providers({ children }: any) {
   return (
-    <SessionProvider>
-      <QueryProvider>{children}</QueryProvider>
-    </SessionProvider>
+    <QueryProvider>
+      {children}
+      <Toaster position="top-right" richColors closeButton />
+    </QueryProvider>
   );
 }

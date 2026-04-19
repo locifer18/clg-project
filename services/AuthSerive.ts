@@ -15,6 +15,7 @@ import {
 import {
   RegisterRequest,
   LoginRequest,
+  Role,
 } from "@/types";
 import { sendOtpService, verifyOtpService } from "./OtpServise";
 import { verifyOtp } from "@/lib/otp";
@@ -134,29 +135,38 @@ export async function verifyLoginOtp(
     throw new AuthenticationError("User not found");
   }
 
-  // ✅ Generate JWT
-  const accessToken = signToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    tokenVersion: user.tokenVersion,
-  });
 
-  const refreshToken = crypto.randomBytes(32).toString("hex");
+
 
   // ✅ Create session
-  const session = await createSession(user.id, accessToken, {
+  const session = await createSession(user.id, "temp", {
     userAgent: req.headers.get("user-agent") || undefined,
     ipAddress: getSessionMetadata(req).ipAddress,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   });
 
+  // ✅ Generate JWT
+  const accessToken = signToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role as Role,
+    sessionId: session.id,
+    tokenVersion: user.tokenVersion,
+  });
+
+  const refreshToken = crypto.randomBytes(32).toString("hex");
+
   if (session) {
     await prisma.session.update({
       where: { id: session.id },
-      data: { refreshToken },
+      data: {
+        accessToken,
+        refreshToken
+      },
     });
   }
+
+
 
   return {
     message: "Login successful",
@@ -216,7 +226,7 @@ export async function refreshTokenService(refreshToken: string) {
   const newAccessToken = signToken({
     userId: session.user.id,
     email: session.user.email,
-    role: session.user.role,
+    role: session.user.role as Role,
     sessionId: session.id,
     tokenVersion: session.user.tokenVersion,
   });

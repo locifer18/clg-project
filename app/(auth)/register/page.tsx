@@ -4,16 +4,17 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { register as registerAPI } from '@/features/auth/auth.api';
 import { AuthInput } from '@/components/(auth)/AuthInput';
 import { registerSchema } from '@/lib/validation';
 import { RegisterFormData } from '@/types';
 import { PasswordStrength } from '@/components/(auth)/PasswordStrenght';
 import { AuthButton } from '@/components/(auth)/AuthButton';
+import { useRegister } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [error, setError] = useState<string>('');
+  const { mutate: registerUser, isPending: isRegisterPending } = useRegister(); const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -23,31 +24,30 @@ export default function RegisterPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
-    // resolver: zodResolver(registerSchema),
+    resolver: zodResolver(registerSchema),
     mode: 'onChange',
   });
 
   const password = watch('password');
 
+
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setError('');
 
-      const response = await registerAPI({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        phone: data.phone,
+      registerUser(data, {
+        onSuccess: (response) => {
+          setSuccessMessage('✓ Account created! Redirecting to verification...');
+          setTimeout(() => {
+            router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+          }, 1500);
+        },
+        onError: (err: any) => {
+          const errorMsg = err.response?.data?.message || 'Registration failed';
+          setError(errorMsg);
+          toast.error(errorMsg);
+        },
       });
-
-      if (response.success) {
-        setSuccessMessage('✓ Account created! Redirecting to verification...');
-        setTimeout(() => {
-          router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
-        }, 1500);
-      } else {
-        setError(response.message || 'Registration failed');
-      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred');
     }
@@ -134,7 +134,7 @@ export default function RegisterPage() {
       {successMessage && <SuccessMessage message={successMessage} />}
 
       {/* Submit button */}
-      <AuthButton isLoading={isSubmitting} type="submit">
+      <AuthButton isLoading={isRegisterPending} type="submit">
         Create Account
       </AuthButton>
 

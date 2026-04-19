@@ -1,5 +1,3 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { prisma } from './db';
 import { verifyToken } from './jwt';
 
@@ -7,24 +5,27 @@ import { verifyToken } from './jwt';
  * Get current authenticated user from session or token
  * Works with both NextAuth sessions and JWT tokens
  */
+import { headers, cookies } from "next/headers";
+
 export async function getUser() {
   try {
-    // Try NextAuth first
-    const session = await getServerSession(authOptions);
-
-    if (session?.user?.email) {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
-
-      if (user) return user;
+    const headerList = await headers();
+    let token =
+      headerList.get("authorization")?.split(" ")[1] ||
+      headerList.get("Authorization")?.split(" ")[1];
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get("accessToken")?.value;
     }
 
-    // If no NextAuth session, return null
-    // JWT token validation should be done in middleware
-    return null;
+    if (!token) return null;
+
+    // ✅ 3. Verify token
+    const user = await getUserFromToken(token);
+
+    return user;
   } catch (error) {
-    console.error('Failed to get user:', error);
+    console.error("Failed to get user:", error);
     return null;
   }
 }
@@ -105,17 +106,19 @@ export async function isAdmin(userId: string): Promise<boolean> {
 export async function getUserFromToken(token: string) {
   try {
     const payload = verifyToken(token);
-
     if (!payload) return null;
 
-    const user = await getUserById(payload.userId);
+    const session = await prisma.session.findUnique({
+      where: { id: payload.sessionId },
+    });
 
+    if (!session) return null;
+    if (new Date() > session.expiresAt) return null;
+
+    const user = await getUserById(payload.userId);
     if (!user) return null;
 
-    // Check if token version matches (invalidates old tokens on password change)
-    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
-      return null;
-    }
+    if (payload.tokenVersion !== user.tokenVersion) return null;
 
     return user;
   } catch (error) {

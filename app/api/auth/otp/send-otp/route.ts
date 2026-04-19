@@ -1,15 +1,16 @@
 import { asyncHandler, successResponse, ValidationError } from "@/lib/errors";
 import { sendOtpService } from "@/services/OtpServise";
-import { sendOtpSchema } from "@/lib/validation";
+// import { sendOtpSchema } from "@/lib/validation";
+import { SendOtpRequest } from "@/types";
 
 export const POST = asyncHandler(async (req: Request) => {
-  const body = await req.json();
+  const body: SendOtpRequest = await req.json();
 
-  const validation = sendOtpSchema.safeParse(body);
-  if (!validation.success) {
-    throw new ValidationError(validation.error.issues[0].message);
-  }
+  // const validation = body;
+  // if (!validation.success) {
+  //   throw new ValidationError(validation.error.issues[0].message);
+  // }
 
-  await sendOtpService(validation.data);
+  await sendOtpService(body);
   return successResponse("If account exists, OTP has been sent");
 });

@@ -58,7 +58,14 @@ export const registerSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
+  confirmPassword: z.string()
+    .min(1, 'Please confirm your password'),
   phone: phoneSchema,
+  agreeToTerms: z.boolean()
+    .refine(val => val === true, 'You must agree to the terms'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export const loginPasswordSchema = z.object({

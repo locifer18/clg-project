@@ -1,24 +1,42 @@
-import { asyncHandler, successResponse } from "@/lib/errors";
+import { asyncHandler, AuthenticationError, successResponse } from "@/lib/errors";
 import { refreshTokenService } from "@/services/AuthSerive";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 export const POST = asyncHandler(async (req: Request) => {
-  const body = await req.json();
-  const { refreshToken } = body;
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get("refreshToken")?.value;
+
+  if (!refreshToken) {
+    throw new AuthenticationError("Refresh token missing");
+  }
 
   const result = await refreshTokenService(refreshToken);
 
-  const response = successResponse("Token refreshed successfully", result);
+  const response = NextResponse.json({
+    success: true,
+    message: "Token refreshed",
+    data: {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
+  });
 
-  // ✅ Set cookies
-  response.headers.set(
-    "Set-Cookie",
-    `accessToken=${result.accessToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900`
-  );
+  response.cookies.set("accessToken", result.accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: "/",
+  });
 
-  response.headers.append(
-    "Set-Cookie",
-    `refreshToken=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/auth/refresh; Max-Age=604800`
-  );
+  response.cookies.set("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    path: "/",
+  });
 
   return response;
 });

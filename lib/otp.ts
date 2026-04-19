@@ -11,7 +11,13 @@ export const hashOtp = (otp: string): string => {
 
 export const verifyOtp = (plainOtp: string, hashedOtp: string): boolean => {
   const hash = hashOtp(plainOtp);
+  // Test it:
+console.log("Plain:", plainOtp); // Should be "123456"
+console.log("Hashed from DB:", hashedOtp); // Should be hash
+console.log("Our hash:", hashOtp(plainOtp)); // Should match DB hash
+console.log("Match:", hash === hashedOtp); // Should be true
   return hash === hashedOtp;
+  
 };
 
 // Track OTP attempts with Redis (recommended) or in-memory for small scale

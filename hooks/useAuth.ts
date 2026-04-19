@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { login, register, logout } from "@/features/auth/auth.api";
-import {  ApiResponse, LoginRequest, RegisterRequest } from "@/types";
+import { ApiResponse, LoginRequest, RegisterRequest } from "@/types";
 
 export const useLogin = () => {
   const queryClient = useQueryClient();
@@ -8,7 +8,7 @@ export const useLogin = () => {
   return useMutation<ApiResponse, unknown, LoginRequest & { password: string }>({
     mutationFn: login,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["me"] }); // 🔥 refresh user
+      queryClient.invalidateQueries({ queryKey: ["me"] });
     },
   });
 };
@@ -25,8 +25,7 @@ export const useLogout = () => {
   return useMutation<ApiResponse>({
     mutationFn: logout,
     onSuccess: () => {
-      queryClient.clear();
-      window.location.href = "/login";
+      queryClient.setQueryData(["me"], null);
     },
   });
 };

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { VerifyOtpRequest } from "@/types";
-import { verifyLoginOtp, sendOtp } from "@/features/auth/auth.api";
+import { verifyLoginOtp, sendOtp, verifyOtp } from "@/features/auth/auth.api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { OtpInput } from "./OtpInput";
@@ -38,12 +38,23 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
   });
 
   const verifyMutation = useMutation({
-    mutationFn: verifyLoginOtp,
+    mutationFn: async (data: VerifyOtpRequest) => {
+      if (type === "EMAIL_VERIFICATION") {
+        return await verifyOtp(data);
+      } else {
+        return await verifyLoginOtp(data);
+      }
+    },
     onSuccess: (data) => {
       toast.success("Verification successful!", {
         icon: <CheckCircle2 className="h-5 w-5" />,
       });
-      router.push("/");
+
+      if (type === "EMAIL_VERIFICATION") {
+        router.push("/login?verified=true");
+      } else {
+        router.push("/dashboard");
+      }
     },
     onError: (error: any) => {
       toast.error("Verification failed", {
@@ -81,12 +92,18 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
   }, [otp, setValue]);
 
   const onSubmit = async (data: VerifyOtpRequest) => {
+    console.log("📤 Sending to API:", data); // What are we sending?
+
     if (data.code.length !== 6) {
       setError("code", { message: "Please enter the 6-digit code" });
       return;
     }
 
-    await verifyMutation.mutateAsync(data);
+    try {
+      await verifyMutation.mutateAsync(data);
+    } catch (err: any) {
+      console.log("❌ Error response:", err.response?.data); // What error?
+    }
   };
 
   return (

@@ -39,10 +39,18 @@ export const verifyLoginOtp = async (
 export const register = async (
   data: RegisterFormData
 ): Promise<ApiResponse<{ message: string; nextStep: string }>> => {
-  const res = await api.post<
-    ApiResponse<{ message: string; nextStep: string }>
-  >("/auth/register", data);
-
+  const { name, email, password, phone } = data;
+  
+  const res = await api.post<ApiResponse<{ message: string; nextStep: string }>>(
+    "/auth/register",
+    {
+      name,
+      email,
+      password,
+      phone,
+    }
+  );
+ 
   return res.data;
 };
 
@@ -66,7 +74,6 @@ export const verifyOtp = async (
     "/auth/otp/verify-otp",
     data
   );
-
   return res.data;
 };
 

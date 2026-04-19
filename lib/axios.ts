@@ -8,60 +8,69 @@ const api = axios.create({
   },
 });
 
-// 🔥 Prevent multiple refresh calls
+const refreshApi = axios.create({
+  baseURL: "/api",
+  withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
 let isRefreshing = false;
 let failedQueue: any[] = [];
 
-// process queue after refresh
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
 
-// 🔥 RESPONSE INTERCEPTOR
 api.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   async (error) => {
     const originalRequest = error.config;
-
-    // 🔥 If token expired
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => api(originalRequest));
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        });
       }
-
       originalRequest._retry = true;
       isRefreshing = true;
-
       try {
-        await axios.post(
-          "/api/auth/refresh",
-          {},
-          { withCredentials: true }
-        );
+        const res = await refreshApi.post("/auth/refresh", {});
+        const newToken = res.data?.data?.accessToken || res.data?.accessToken;
 
-        processQueue(null);
+        if (!newToken) {
+          throw new Error("No access token in response");
+        }
 
+        localStorage.setItem("accessToken", newToken);
+        processQueue(null, newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (err) {
         processQueue(err, null);
-
-        // 🔥 logout fallback
+        localStorage.clear();
         window.location.href = "/login";
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }
     }
-
     return Promise.reject(error);
   }
 );

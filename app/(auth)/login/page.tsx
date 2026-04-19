@@ -4,52 +4,56 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { login, verifyLoginOtp } from '@/features/auth/auth.api';
+import { useRouter } from 'next/navigation';
+import { verifyLoginOtp } from '@/features/auth/auth.api';
+import { useLogin } from '@/hooks/useAuth';
 import { AuthInput } from '@/components/(auth)/AuthInput';
 import { OtpInput } from '@/components/(auth)/OtpInput';
 import { AuthButton } from '@/components/(auth)/AuthButton';
 import { loginPasswordSchema } from '@/lib/validation';
 import { LoginFormData, VerifyOtpRequest } from '@/types';
 import toast from 'react-hot-toast';
+import { useQueryClient } from "@tanstack/react-query";
+
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isOtpSubmitting, setIsOtpSubmitting] = useState(false);
   const [otp, setOtp] = useState('');
+  const queryClient = useQueryClient();
+
+  const { mutate: loginUser, isPending: isLoginPending } = useLogin();
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginPasswordSchema),
     mode: 'onBlur',
   });
 
-  const onPasswordSubmit = async (data: LoginFormData) => {
-    try {
-      setError('');
-      setSuccessMessage('');
+  const onPasswordSubmit = (data: LoginFormData) => {
+    setError('');
+    setSuccessMessage('');
 
-      const response = await login(data);
-
-      if (response.success) {
+    loginUser(data, {
+      onSuccess: (response) => {
         setEmail(data.email);
         setSuccessMessage('✓ OTP sent to your email!');
+        toast.success('OTP sent to your email!');
         setTimeout(() => setStep('otp'), 1500);
-      } else {
-        setError(response.message || 'Login failed');
-        toast.error(response.message || 'Login failed');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
-    }
+      },
+      onError: (err: any) => {
+        const errorMsg = err.response?.data?.message || 'Login failed';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      },
+    });
   };
 
   const onOtpComplete = async (code: string) => {
@@ -66,22 +70,18 @@ export default function LoginPage() {
       const response = await verifyLoginOtp(data);
 
       if (response.success) {
-        const authResponse = (response as any).data;
-        localStorage.setItem('accessToken', authResponse.accessToken);
-        localStorage.setItem('refreshToken', authResponse.refreshToken);
-        localStorage.setItem('user', JSON.stringify(authResponse.user));
 
-        setSuccessMessage('✓ Login successful! Redirecting...');
-        setTimeout(() => {
-          router.push(searchParams.get('callbackUrl') || '/dashboard');
-        }, 800);
+        await queryClient.invalidateQueries({ queryKey: ["me"] });
+        toast.success('Login successful!');
+        router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP');
+      const errorMsg = err.response?.data?.message || 'Invalid OTP';
+      setError(errorMsg);
+      toast.error(errorMsg);
       setIsOtpSubmitting(false);
     }
   };
-
 
   useEffect(() => {
     if (otp.length === 6) {
@@ -114,7 +114,7 @@ export default function LoginPage() {
           {error && <ErrorMessage message={error} />}
           {successMessage && <SuccessMessage message={successMessage} />}
 
-          <AuthButton isLoading={isSubmitting} type="submit">
+          <AuthButton isLoading={isLoginPending} type="submit">
             Continue to OTP
           </AuthButton>
 
@@ -140,7 +140,12 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <OtpInput value={otp} onChange={setOtp} error={error} isLoading={isOtpSubmitting} />
+          <OtpInput
+            value={otp}
+            onChange={setOtp}
+            error={error}
+            isLoading={isOtpSubmitting}
+          />
 
           {successMessage && <SuccessMessage message={successMessage} />}
 
@@ -151,6 +156,7 @@ export default function LoginPage() {
               setStep('password');
               setError('');
               setSuccessMessage('');
+              setOtp('');
             }}
           >
             ← Back to login
