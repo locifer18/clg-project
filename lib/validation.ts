@@ -58,18 +58,17 @@ export const registerSchema = z.object({
   name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
-  confirmPassword: z.string(),
   phone: phoneSchema,
-  agreedToTerms: z.boolean().refine((val) => val === true, 'You must agree to terms'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
 
-export const loginSchema = z.object({
+export const loginPasswordSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+export const loginOtpSchema = z.object({
   email: emailSchema,
   code: otpSchema,
-  password: passwordSchema,
 });
 
 export const sendOtpSchema = z.object({
@@ -98,6 +97,14 @@ export const changePasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   email: emailSchema,
   otp: otpSchema,
+  newPassword: passwordSchema,
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+export const resetPasswordOnlySchema = z.object({
   newPassword: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
@@ -188,11 +195,13 @@ const validationFunctions = {
   otpSchema,
   urlSchema,
   registerSchema,
-  loginSchema,
+  loginOtpSchema,
+  loginPasswordSchema,
   sendOtpSchema,
   verifyOtpSchema,
   changePasswordSchema,
   resetPasswordSchema,
+  resetPasswordOnlySchema,
   validateBody,
   sanitizeInput,
   checkPasswordStrength,

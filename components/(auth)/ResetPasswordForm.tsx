@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { sendOtpSchema, type SendOtpRequest } from "@/types";
+import { SendOtpRequest } from "@/types";
 import { sendOtp } from "@/features/auth/auth.api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,6 @@ export function ForgotPasswordForm() {
     formState: { errors, isSubmitting },
     getValues,
   } = useForm<SendOtpRequest>({
-    resolver: zodResolver(sendOtpSchema),
     defaultValues: {
       type: "PASSWORD_RESET",
     },

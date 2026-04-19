@@ -18,7 +18,7 @@ export function AuthLayout({
   showBackToHome = true,
 }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen flex flex-col bg-gradient-o-br from-gray-50 to-gray-100">
       {/* Header */}
       <header className="w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">

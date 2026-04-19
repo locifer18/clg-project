@@ -18,7 +18,7 @@ export interface RegisterRequest {
 
 export interface LoginRequest {
     email: string;
-    code: string; // OTP
+    password: string; // OTP
 }
 
 export interface RefreshTokenRequest {
@@ -52,10 +52,10 @@ export interface ResetPasswordRequest {
 // ============= AUTH RESPONSES =============
 
 export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
 }
 
 export interface AuthResponse {
@@ -101,7 +101,7 @@ export interface CreateProductRequest {
     productDetails?: JSON;
 }
 
-export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
+export interface UpdateProductRequest extends Partial<CreateProductRequest> { }
 
 // ============= ORDER REQUESTS =============
 
@@ -167,7 +167,7 @@ export interface CreateAddressRequest {
     isDefault?: boolean;
 }
 
-export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+export interface UpdateAddressRequest extends Partial<CreateAddressRequest> { }
 
 // ============= STANDARD RESPONSES =============
 
@@ -206,11 +206,11 @@ export interface SuccessResponse<T = any> {
 
 // ============= SPECIFIC RESPONSES =============
 
-export interface ProductListResponse extends PaginatedResponse<Product> {}
+export interface ProductListResponse extends PaginatedResponse<Product> { }
 
-export interface OrderResponse extends ApiResponse<Order> {}
+export interface OrderResponse extends ApiResponse<Order> { }
 
-export interface UserResponse extends ApiResponse<UserWithoutPassword> {}
+export interface UserResponse extends ApiResponse<UserWithoutPassword> { }
 
 export interface SessionResponse extends ApiResponse<{
     id: string;
@@ -218,7 +218,7 @@ export interface SessionResponse extends ApiResponse<{
     ipAddress: string;
     createdAt: Date;
     expiresAt: Date;
-}[]> {}
+}[]> { }
 
 export interface LoginHistoryResponse extends PaginatedResponse<{
     id: string;
@@ -232,4 +232,4 @@ export interface LoginHistoryResponse extends PaginatedResponse<{
         severity: string;
         message: string;
     }>;
-}> {}
+}> { }

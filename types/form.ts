@@ -12,12 +12,13 @@ export interface RegisterFormData {
     password: string;
     confirmPassword: string;
     phone?: string;
-    agreedToTerms: boolean;
+    agreeToTerms: boolean;
 }
 
 export interface LoginFormData {
     email: string;
-    code: string; // OTP
+    // code: string;
+    password: string;
 }
 
 export interface SendOtpFormData {

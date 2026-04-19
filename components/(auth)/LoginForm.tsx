@@ -2,10 +2,7 @@
 
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { emailSchema, passwordSchema } from "@/lib/validation";
-import { useLogin } from "@/hooks/auth.mutation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,13 +11,9 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLogin } from "@/hooks/useAuth";
+import { LoginFormData } from "@/types";
 
-const loginPasswordSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-});
-
-type LoginPasswordFormData = z.infer<typeof loginPasswordSchema>;
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,12 +24,11 @@ export function LoginForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
     getValues,
-  } = useForm<LoginPasswordFormData>({
-    resolver: zodResolver(loginPasswordSchema),
+  } = useForm<LoginFormData>({
     mode: "onBlur",
   });
 
-  const onSubmit = async (data: LoginPasswordFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await loginMutation.mutateAsync(data);
 

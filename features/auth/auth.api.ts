@@ -3,7 +3,7 @@ import {
   ApiResponse,
   AuthResponse,
   LoginRequest,
-  RegisterRequest,
+  RegisterFormData,
   SendOtpRequest,
   VerifyOtpRequest,
   ResetPasswordRequest,
@@ -28,7 +28,7 @@ export const verifyLoginOtp = async (
   data: VerifyOtpRequest
 ): Promise<ApiResponse<AuthResponse>> => {
   const res = await api.post<ApiResponse<AuthResponse>>(
-    "/auth/verify-login-otp",
+    "/auth/otp/verify-otp",
     data
   );
 
@@ -37,7 +37,7 @@ export const verifyLoginOtp = async (
 
 // REGISTER
 export const register = async (
-  data: RegisterRequest
+  data: RegisterFormData
 ): Promise<ApiResponse<{ message: string; nextStep: string }>> => {
   const res = await api.post<
     ApiResponse<{ message: string; nextStep: string }>

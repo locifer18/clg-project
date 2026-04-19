@@ -1,26 +1,27 @@
 "use client";
 
-import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { verifyOtpSchema, type VerifyOtpRequest } from "@/types";
+import { VerifyOtpRequest } from "@/types";
 import { verifyLoginOtp, sendOtp } from "@/features/auth/auth.api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { OTPInput } from "./OTPInput";
+import { OtpInput } from "./OtpInput";
 import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
+import { verifyOtpSchema } from "@/lib/validation";
+import { useEffect, useState } from "react";
 
 export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_VERIFICATION" | "LOGIN_VERIFICATION" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
 
-  const [otp, setOtp] = React.useState("");
-  const [resendCooldown, setResendCooldown] = React.useState(0);
+  const [otp, setOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const {
     handleSubmit,
@@ -68,14 +69,14 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setValue("code", otp);
   }, [otp, setValue]);
 
@@ -101,7 +102,7 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
           </div>
 
           {/* OTP Input */}
-          <OTPInput
+          <OtpInput
             value={otp}
             onChange={setOtp}
             error={errors.code?.message}
