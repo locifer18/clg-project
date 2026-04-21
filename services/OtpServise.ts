@@ -11,7 +11,6 @@ import {
 
 import { SendOtpRequest, VerifyOtpRequest } from "@/types";
 
-// ⚠️ Temporary in-memory rate limiter
 const otpRateLimit = new Map<
   string,
   { count: number; resetTime: Date }
@@ -46,7 +45,6 @@ const checkRateLimit = (email: string): boolean => {
 export async function sendOtpService(data: SendOtpRequest) {
   const { email, type } = data;
 
-  // ✅ Rate limit
   if (!checkRateLimit(email)) {
     throw new RateLimitError("Too many OTP requests. Try again later.");
   }
@@ -55,21 +53,18 @@ export async function sendOtpService(data: SendOtpRequest) {
     where: { email },
   });
 
-  // 👉 Always silent response (handled in route)
   if (!user) return;
 
-  // Email already verified case
   if (type === "EMAIL_VERIFICATION" && user.emailVerified) {
     return;
   }
 
-  // Delete old OTPs
   await prisma.otpToken.deleteMany({
     where: { email, type },
   });
 
-  // Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log("Plain OTP:", otp);
   const hashedOtp = hashOtp(otp);
 
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -84,7 +79,6 @@ export async function sendOtpService(data: SendOtpRequest) {
     },
   });
 
-  // Email subject
   let subject = "Verify Your Email";
   if (type === "PASSWORD_RESET") subject = "Reset Your Password";
   if (type === "LOGIN_VERIFICATION")

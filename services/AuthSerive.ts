@@ -16,10 +16,10 @@ import {
   RegisterRequest,
   LoginRequest,
   Role,
+  VerifyLoginOtpRequest,
+  ResetPasswordRequest
 } from "@/types";
 import { sendOtpService, verifyOtpService } from "./OtpServise";
-import { verifyOtp } from "@/lib/otp";
-
 
 // ================= REGISTER =================
 export async function registerUser(data: RegisterRequest) {
@@ -116,14 +116,15 @@ export async function loginUser(data: LoginRequest & { password: string }) {
 
 // ================= LOGIN STEP 2 =================
 export async function verifyLoginOtp(
-  data: LoginRequest,
+  data: VerifyLoginOtpRequest,
   req: Request
 ) {
-  const { email } = data;
+  const { email, code } = data;
 
   // Verify OTP via service
   await verifyOtpService({
-    ...data,
+    email,
+    code,
     type: "LOGIN_VERIFICATION",
   });
 
@@ -135,17 +136,12 @@ export async function verifyLoginOtp(
     throw new AuthenticationError("User not found");
   }
 
-
-
-
-  // ✅ Create session
   const session = await createSession(user.id, "temp", {
     userAgent: req.headers.get("user-agent") || undefined,
     ipAddress: getSessionMetadata(req).ipAddress,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   });
 
-  // ✅ Generate JWT
   const accessToken = signToken({
     userId: user.id,
     email: user.email,
@@ -165,9 +161,7 @@ export async function verifyLoginOtp(
       },
     });
   }
-
-
-
+  
   return {
     message: "Login successful",
     user: {
@@ -247,42 +241,13 @@ export async function refreshTokenService(refreshToken: string) {
   };
 }
 
-export async function resetPasswordService(data: {
-  email: string;
-  otp: string;
-  newPassword: string;
-}) {
-  const { email, otp, newPassword } = data;
+export async function resetPasswordService(data: ResetPasswordRequest) {
+  const { email, newPassword } = data;
 
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
     throw new ValidationError("Invalid request");
-  }
-
-  const existingOtp = await prisma.otpToken.findFirst({
-    where: { email, type: "PASSWORD_RESET" },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!existingOtp) {
-    throw new ValidationError("No reset request found");
-  }
-
-  if (new Date() > existingOtp.expiresAt) {
-    await prisma.otpToken.delete({ where: { id: existingOtp.id } });
-    throw new ValidationError("OTP expired");
-  }
-
-  const isValid = verifyOtp(otp, existingOtp.code);
-
-  if (!isValid) {
-    await prisma.otpToken.update({
-      where: { id: existingOtp.id },
-      data: { attempts: { increment: 1 } },
-    });
-
-    throw new ValidationError("Invalid OTP");
   }
 
   const isSame = await bcrypt.compare(newPassword, user.password || "");
@@ -297,11 +262,9 @@ export async function resetPasswordService(data: {
     where: { email },
     data: {
       password: hashedPassword,
-      tokenVersion: { increment: 1 }, // 🔥 invalidate all sessions
+      tokenVersion: { increment: 1 },
     },
   });
-
-  await prisma.otpToken.delete({ where: { id: existingOtp.id } });
 
   return {
     message: "Password reset successful",

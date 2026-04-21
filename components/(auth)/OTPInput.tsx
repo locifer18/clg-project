@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 interface OtpInputProps {
   value: string;
@@ -13,65 +14,49 @@ export function OtpInput({ value, onChange, error, isLoading }: OtpInputProps) {
   const otpArray = value.split('').concat(Array(6).fill('')).slice(0, 6);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
+
   const handleChange = (index: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
-
     const newOtp = [...otpArray];
     newOtp[index] = val;
-
-    if (val && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
+    if (val && index < 5) inputRefs.current[index + 1]?.focus();
     onChange(newOtp.join(''));
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       const newOtp = [...otpArray];
-
       if (!otpArray[index] && index > 0) {
         inputRefs.current[index - 1]?.focus();
       } else {
         newOtp[index] = '';
         onChange(newOtp.join(''));
       }
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    } else if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus();
+    else if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-
     const pasteData = e.clipboardData.getData('text');
     const numbers = pasteData.replace(/\D/g, '').slice(0, 6);
-
     if (!numbers) return;
-
     const newOtp = numbers.split('').concat(Array(6).fill('')).slice(0, 6);
-
     onChange(newOtp.join(''));
-
     const nextEmptyIndex = newOtp.findIndex((d) => d === '');
     inputRefs.current[nextEmptyIndex !== -1 ? nextEmptyIndex : 5]?.focus();
   };
 
   return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-4">
-        Enter the 6-digit code
-      </label>
-
-      <div className="flex gap-3 justify-center mb-4">
+    <div className="space-y-2.5">
+      <div className="flex gap-2 justify-center">
         {otpArray.map((digit, index) => (
           <input
             key={index}
-            ref={(el) => {
-              inputRefs.current[index] = el;
-            }}
+            ref={(el) => { inputRefs.current[index] = el; }}
             type="text"
             inputMode="numeric"
             maxLength={1}
@@ -81,31 +66,30 @@ export function OtpInput({ value, onChange, error, isLoading }: OtpInputProps) {
             onPaste={handlePaste}
             disabled={isLoading}
             className={`
-              flex-1 min-w-0 aspect-square text-2xl font-bold text-center
-              rounded-lg border-2 transition-all duration-200
-              bg-slate-50 dark:bg-slate-800
-              text-slate-900 dark:text-white
+              w-11 h-12 text-lg font-semibold text-center
+              rounded-lg border transition-all duration-200
+              bg-white/70 backdrop-blur text-slate-900
               disabled:opacity-50 disabled:cursor-not-allowed
-              ${error ? 'border-red-500 focus:border-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-blue-500'}
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white
-              dark:focus:ring-offset-slate-900
-              ${digit ? 'ring-2 ring-blue-200 dark:ring-blue-900' : ''}
+              focus:outline-none focus:ring-2 focus:ring-indigo-500/30
+              ${error
+                ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
+                : digit
+                  ? 'border-indigo-400 bg-indigo-50/60'
+                  : 'border-slate-200 focus:border-indigo-500'}
             `}
           />
         ))}
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-          <svg className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-          </svg>
-          <p className="text-sm font-medium text-red-800 dark:text-red-300">{error}</p>
+        <div className="flex items-center gap-1.5 justify-center text-[11px] text-rose-600">
+          <AlertCircle className="h-3 w-3" />
+          <span className="font-medium">{error}</span>
         </div>
       )}
 
-      <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-4">
-        Check your email for the code. It may take a few seconds to arrive.
+      <p className="text-[15px] text-slate-500 text-center">
+        Check your email — the code arrives within seconds.
       </p>
     </div>
   );

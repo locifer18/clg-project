@@ -1,4 +1,3 @@
-// components/auth/AuthButton.tsx
 'use client';
 
 import { ButtonHTMLAttributes, ReactNode } from 'react';
@@ -19,40 +18,37 @@ export function AuthButton({
   className,
   ...props
 }: AuthButtonProps) {
-  const baseStyles = `
-    inline-flex items-center justify-center gap-2
-    px-6 py-3 rounded-lg font-semibold text-sm
-    transition-all duration-200
+  const base = `
+    relative inline-flex items-center justify-center gap-2
+    px-5 h-10 rounded-lg font-semibold text-sm
+    transition-all duration-200 overflow-hidden
     disabled:opacity-50 disabled:cursor-not-allowed
-    focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900
+    focus:outline-none focus:ring-2 focus:ring-offset-2
     ${fullWidth ? 'w-full' : ''}
   `;
 
   const variants = {
     primary: `
-      bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
-      text-white shadow-md hover:shadow-lg
-      focus:ring-blue-500 dark:focus:ring-blue-400
-      active:scale-95
+      bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600
+      bg-[length:200%_100%] bg-left hover:bg-right
+      text-white shadow-lg shadow-indigo-600/30 hover:shadow-xl hover:shadow-indigo-600/40
+      focus:ring-indigo-500 active:scale-[0.98]
     `,
     secondary: `
-      bg-slate-200 dark:bg-slate-800
-      text-slate-900 dark:text-white
-      hover:bg-slate-300 dark:hover:bg-slate-700
-      focus:ring-slate-500 dark:focus:ring-slate-400
+      bg-white/70 border border-slate-200 backdrop-blur
+      text-slate-900 hover:bg-white hover:border-slate-300
+      focus:ring-slate-400
     `,
     ghost: `
-      bg-transparent
-      text-blue-600 dark:text-blue-400
-      hover:bg-blue-50 dark:hover:bg-slate-800
-      focus:ring-blue-500 dark:focus:ring-blue-400
+      bg-transparent text-indigo-600 hover:bg-indigo-50
+      focus:ring-indigo-500
     `,
   };
 
   return (
     <button
       disabled={disabled || isLoading}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+      className={`${base} ${variants[variant]} ${className ?? ''}`}
       {...props}
     >
       {isLoading ? (

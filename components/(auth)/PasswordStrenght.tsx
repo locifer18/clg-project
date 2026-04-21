@@ -1,14 +1,14 @@
-// components/auth/PasswordStrength.tsx
 'use client';
+
+import { Check, X } from 'lucide-react';
 
 interface PasswordStrengthProps {
   password: string;
 }
 
 export function PasswordStrength({ password }: PasswordStrengthProps) {
-  const calculateStrength = (pwd: string): { score: number; label: string; color: string } => {
+  const calculateStrength = (pwd: string) => {
     let score = 0;
-
     if (pwd.length >= 12) score++;
     if (pwd.length >= 16) score++;
     if (/[a-z]/.test(pwd)) score++;
@@ -16,57 +16,54 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
     if (/\d/.test(pwd)) score++;
     if (/[^A-Za-z0-9]/.test(pwd)) score++;
 
-    if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-    if (score <= 4) return { score: 2, label: 'Fair', color: 'bg-yellow-500' };
-    if (score <= 5) return { score: 3, label: 'Good', color: 'bg-blue-500' };
-    return { score: 4, label: 'Strong', color: 'bg-green-500' };
+    if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-rose-500', text: 'text-rose-600' };
+    if (score <= 4) return { score: 2, label: 'Fair', color: 'bg-amber-500', text: 'text-amber-600' };
+    if (score <= 5) return { score: 3, label: 'Good', color: 'bg-sky-500', text: 'text-sky-600' };
+    return { score: 4, label: 'Strong', color: 'bg-emerald-500', text: 'text-emerald-600' };
   };
 
   const strength = calculateStrength(password);
 
   const requirements = [
-    { text: 'At least 12 characters', met: password.length >= 12 },
-    { text: 'Uppercase letter (A-Z)', met: /[A-Z]/.test(password) },
-    { text: 'Lowercase letter (a-z)', met: /[a-z]/.test(password) },
+    { text: '12+ characters', met: password.length >= 12 },
+    { text: 'Uppercase (A-Z)', met: /[A-Z]/.test(password) },
+    { text: 'Lowercase (a-z)', met: /[a-z]/.test(password) },
     { text: 'Number (0-9)', met: /\d/.test(password) },
-    { text: 'Special character (!@#$%^&*)', met: /[^A-Za-z0-9]/.test(password) },
+    { text: 'Special (!@#$)', met: /[^A-Za-z0-9]/.test(password) },
   ];
 
   return (
-    <div className="mb-5 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-      {/* Strength meter */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-semibold text-slate-900 dark:text-white">Password Strength</label>
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{strength.label}</span>
-        </div>
-        <div className="h-2 bg-slate-300 dark:bg-slate-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${strength.color} transition-all duration-300`}
-            style={{ width: `${(strength.score / 4) * 100}%` }}
-          ></div>
-        </div>
+    <div className="space-y-2 rounded-lg border border-slate-200/70 bg-slate-50/60 p-2.5 backdrop-blur">
+      <div className="flex items-center justify-between">
+        {/* <span className="text-[11px] font-medium text-slate-600">Password strength</span> */}
+        <span className={`text-[11px] font-semibold ${strength.text}`}>{strength.label}</span>
       </div>
 
-      {/* Requirements checklist */}
-      <div className="space-y-2">
-        {requirements.map((req, index) => (
-          <div key={index} className="flex items-center gap-2">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-all ${
+              i <= strength.score ? strength.color : 'bg-slate-200'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
+        {requirements.map((req, i) => (
+          <div key={i} className="flex items-center gap-1.5">
             {req.met ? (
-              <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+              <Check className="h-3 w-3 text-emerald-600 shrink-0" />
             ) : (
-              <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+              <X className="h-3 w-3 text-slate-400 shrink-0" />
             )}
-            <span className={`text-xs ${req.met ? 'text-green-600 dark:text-green-400' : 'text-slate-600 dark:text-slate-400'}`}>
+            <span className={`text-[10px] ${req.met ? 'text-slate-700' : 'text-slate-400'}`}>
               {req.text}
             </span>
           </div>
         ))}
-      </div>
+      </div> */}
     </div>
   );
 }

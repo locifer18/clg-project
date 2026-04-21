@@ -1,17 +1,19 @@
-// app/(auth)/forgot-password/page.tsx
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { sendOtp, resetPassword } from '@/features/auth/auth.api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
+import { sendOtp, resetPassword, verifyOtp } from '@/features/auth/auth.api';
 import { AuthInput } from '@/components/(auth)/AuthInput';
 import { AuthButton } from '@/components/(auth)/AuthButton';
 import { OtpInput } from '@/components/(auth)/OtpInput';
 import { PasswordStrength } from '@/components/(auth)/PasswordStrenght';
-import { resetPasswordOnlySchema, sendOtpSchema } from '@/lib/validation';
+import { resetPasswordSchema, sendOtpSchema } from '@/lib/validation';
 import { ResetPasswordFormData, SendOtpRequest } from '@/types';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -21,95 +23,152 @@ export default function ForgotPasswordPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
+  const [isOtpSubmitting, setIsOtpSubmitting] = useState(false);
 
-  // Step 1: Email form
+  // ✅ FIX #1: Separate form for email step
   const {
     register: registerEmail,
     handleSubmit: handleEmailSubmit,
-    formState: {
-      errors: emailErrors,
-      isSubmitting: isEmailSubmitting
-    } } = useForm<SendOtpRequest>({
-      resolver: zodResolver(sendOtpSchema),
-      defaultValues: {
-        type: 'PASSWORD_RESET' as const
-      }
-    });
+    formState: { errors: emailErrors, isSubmitting: isEmailSubmitting },
+  } = useForm({
+    resolver: zodResolver(sendOtpSchema),
+    defaultValues: { type: 'PASSWORD_RESET' as const },
+  });
 
-  // Step 3: Reset password form
   const {
     register: registerPassword,
     handleSubmit: handleResetSubmit,
     watch,
-    formState: {
-      errors: resetErrors,
-      isSubmitting: isResetSubmitting
-    } } = useForm({
-      resolver: zodResolver(resetPasswordOnlySchema),
-      mode: 'onChange',
-    });
+    reset: resetForm,
+    formState: { errors: resetErrors, isSubmitting: isResetSubmitting, isValid: isFormValid },
+  } = useForm({
+    resolver: zodResolver(resetPasswordSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      otp: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  });
 
   const password = watch('newPassword', '');
+  const newPassword = watch('newPassword');
+  const confirmPassword = watch('confirmPassword');
+
+  // ✅ FIX #3: Update form values when email and OTP are set
+  useEffect(() => {
+    if (step === 'reset') {
+      resetForm({
+        email,
+        otp,
+        newPassword: '',
+        confirmPassword: '',
+      });
+    }
+  }, [step, email, otp, resetForm]);
 
   const onEmailSubmit = async (data: SendOtpRequest) => {
     try {
       setError('');
-      const response = await sendOtp({
-        email: data.email,
-        type: 'PASSWORD_RESET',
-      });
-
+      setSuccessMessage('');
+      const response = await sendOtp({ email: data.email, type: 'PASSWORD_RESET' });
       if (response.success) {
         setEmail(data.email);
+        setSuccessMessage('OTP sent to your email! Check your inbox.');
         setTimeout(() => {
           setSuccessMessage('');
           setStep('otp');
+          toast.success('OTP sent to your email!');
         }, 1500);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP');
+      const errorMsg = err.response?.data?.message || 'Failed to send OTP';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
-  const onOtpComplete = async (code: string) => {
-    setStep('reset');
+  const onOtpComplete = async () => {
+    try {
+      setIsOtpSubmitting(true);
+      setError('');
+      await verifyOtp({
+        email,
+        code: otp,
+        type: 'PASSWORD_RESET',
+      });
+
+      setStep('reset');
+      toast.success('OTP verified! Now reset your password.');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Invalid OTP';
+      setError(errorMsg);
+      setOtp('');
+      toast.error(errorMsg);
+      setIsOtpSubmitting(false);
+    }
   };
+
   useEffect(() => {
     if (otp.length === 6) {
-      onOtpComplete(otp);
+      onOtpComplete();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
   const onResetSubmit = async (data: ResetPasswordFormData) => {
     try {
       setError('');
-      // Note: You'll need to store the OTP from step 2
-      // This is a simplified version
+      setSuccessMessage('');
+
+      if (data.newPassword !== data.confirmPassword) {
+        setError("Passwords don't match");
+        return;
+      }
+
+      if (!email || !otp) {
+        setError('Invalid request. Please start over.');
+        setStep('email');
+        return;
+      }
+
       const response = await resetPassword({
         email,
-        otp, // Pass actual OTP from previous step
+        otp,
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
       });
 
       if (response.success) {
-        setSuccessMessage('✓ Password reset successful! Redirecting to login...');
-        setTimeout(() => router.push('/login'), 1500);
+        setSuccessMessage('Password reset successful! Redirecting to login...');
+        toast.success('Password reset successful!');
+        setTimeout(() => router.push('/login'), 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reset password');
+      const errorMsg = err.response?.data?.message || 'Failed to reset password';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
+  const isResetFormValid = newPassword && confirmPassword && newPassword === confirmPassword && !resetErrors.newPassword && !resetErrors.confirmPassword;
+
   return (
-    <>
-      {/* Step 1: Email */}
+    <AnimatePresence mode="wait">
       {step === 'email' && (
-        <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-6">
+        <motion.form
+          key="email"
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 10 }}
+          onSubmit={handleEmailSubmit(onEmailSubmit)}
+          className="space-y-3"
+        >
           <AuthInput
-            label="Email Address"
-            type="email"
+            label="Email"
             placeholder="you@example.com"
+            icon={<Mail className="h-4 w-4" />}
             error={emailErrors.email}
             {...registerEmail('email')}
           />
@@ -117,91 +176,143 @@ export default function ForgotPasswordPage() {
           {error && <ErrorMessage message={error} />}
           {successMessage && <SuccessMessage message={successMessage} />}
 
-          <AuthButton isLoading={isEmailSubmitting} type="submit">
-            Send OTP
+          <AuthButton type="submit" isLoading={isEmailSubmitting} className="group">
+            <span className="inline-flex items-center gap-2">
+              Send code
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </AuthButton>
 
-          <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-center text-[11px] text-slate-600 pt-1">
             Remember your password?{' '}
-            <a href="/login" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="/login" className="font-semibold text-indigo-600 hover:underline">
               Sign in
             </a>
           </p>
-        </form>
+        </motion.form>
       )}
 
-      {/* Step 2: OTP */}
       {step === 'otp' && (
-        <div className="space-y-6">
-          <OtpInput value={otp} onChange={setOtp} error={error} />
+        <motion.div
+          key="otp"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          className="space-y-4"
+        >
+          <div className="text-center">
+            <p className="text-sm text-slate-600 mb-4">
+              Enter the 6-digit code sent to <strong>{email}</strong>
+            </p>
+          </div>
 
-          <AuthButton variant="ghost" type="button"
+          <OtpInput value={otp} onChange={setOtp} error={error} isLoading={isOtpSubmitting} />
+
+          {isOtpSubmitting && (
+            <div className="flex items-center justify-center gap-2 text-[11px] text-indigo-600">
+              <RefreshCw className="h-3 w-3 animate-spin" /> Verifying...
+            </div>
+          )}
+
+          {error && <ErrorMessage message={error} />}
+
+          <button
+            type="button"
             onClick={() => {
               setStep('email');
               setOtp('');
               setError('');
-            }}>
-            ← Back
+            }}
+            className="mx-auto flex items-center gap-1 text-[14px] font-medium text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-3 w-3" /> Back
+          </button>
+
+          <p className="text-center text-[11px] text-slate-500">
+            Didn't receive the code? <button type="button" onClick={() => { setStep('email'); setOtp(''); }} className="font-semibold text-indigo-600 hover:underline">Resend</button>
+          </p>
+        </motion.div>
+      )}
+
+      {step === 'reset' && (
+        <motion.form
+          key="reset"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          onSubmit={handleResetSubmit(onResetSubmit)}
+          className="space-y-3"
+        >
+          <div className="text-center mb-4">
+            <p className="text-sm text-slate-600">
+              Create a new password for <strong>{email}</strong>
+            </p>
+          </div>
+
+          <AuthInput
+            label="New password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="••••••••"
+            icon={<Lock className="h-4 w-4" />}
+            error={resetErrors.newPassword}
+            showPassword={showPassword}
+            onTogglePassword={() => setShowPassword(!showPassword)}
+            {...registerPassword('newPassword')}
+          />
+
+          {password && <PasswordStrength password={password} />}
+
+          <AuthInput
+            label="Confirm password"
+            type="password"
+            placeholder="••••••••"
+            icon={<Lock className="h-4 w-4" />}
+            error={resetErrors.confirmPassword}
+            {...registerPassword('confirmPassword')}
+          />
+
+          {error && <ErrorMessage message={error} />}
+          {successMessage && <SuccessMessage message={successMessage} />}
+
+          {/* ✅ FIX #9: Make button disabled only if form is invalid */}
+          <AuthButton
+            type="submit"
+            isLoading={isResetSubmitting}
+            disabled={!isResetFormValid || isResetSubmitting}
+            className="group"
+          >
+            <span className="inline-flex items-center gap-2">
+              Reset password
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </AuthButton>
-        </div >
-      )
-      }
 
-      {/* Step 3: New Password */}
-      {
-        step === 'reset' && (
-          <form onSubmit={handleResetSubmit(onResetSubmit)} className="space-y-6">
-            <AuthInput
-              label="New Password"
-              type="password"
-              placeholder="Min 12 characters with uppercase, number & symbol"
-              error={resetErrors.newPassword}
-              showPassword={showPassword}
-              onTogglePassword={() => setShowPassword(!showPassword)}
-              {...registerPassword('newPassword')}
-            />
-
-            {password && <PasswordStrength password={password} />}
-
-            <AuthInput
-              label="Confirm Password"
-              type="password"
-              placeholder="Re-enter your password"
-              error={resetErrors.confirmPassword}
-              {...registerPassword('confirmPassword')}
-            />
-
-            {error && <ErrorMessage message={error} />}
-            {successMessage && <SuccessMessage message={successMessage} />}
-
-            <AuthButton isLoading={isResetSubmitting} type="submit">
-              Reset Password
-            </AuthButton>
-          </form>
-        )
-      }
-    </>
+          <p className="text-center text-[11px] text-slate-500">
+            Remember your password?{' '}
+            <a href="/login" className="font-semibold text-indigo-600 hover:underline">
+              Sign in
+            </a>
+          </p>
+        </motion.form>
+      )}
+    </AnimatePresence>
   );
 }
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
-      <svg className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-      </svg>
-      <p className="text-sm font-medium text-red-800 dark:text-red-300">{message}</p>
+    <div className="flex items-start gap-2 rounded-lg border border-rose-200/70 bg-rose-50/80 px-2.5 py-2 backdrop-blur">
+      <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-rose-600 shrink-0" />
+      <p className="text-[11px] leading-relaxed text-rose-700">{message}</p>
     </div>
   );
 }
 
 function SuccessMessage({ message }: { message: string }) {
   return (
-    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex gap-3">
-      <svg className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-      <p className="text-sm font-medium text-green-800 dark:text-green-300">{message}</p>
+    <div className="flex items-start gap-2 rounded-lg border border-emerald-200/70 bg-emerald-50/80 px-2.5 py-2 backdrop-blur">
+      <CheckCircle className="h-3.5 w-3.5 mt-0.5 text-emerald-600 shrink-0" />
+      <p className="text-[11px] leading-relaxed text-emerald-700">{message}</p>
     </div>
   );
 }

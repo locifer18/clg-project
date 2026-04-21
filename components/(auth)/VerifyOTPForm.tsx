@@ -1,21 +1,25 @@
+// components/(auth)/VerifyOTPForm.tsx
 "use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from "lucide-react";
+
 import { VerifyOtpRequest } from "@/types";
 import { verifyLoginOtp, sendOtp, verifyOtp } from "@/features/auth/auth.api";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { OtpInput } from "./OtpInput";
-import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
 import { verifyOtpSchema } from "@/lib/validation";
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
-export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_VERIFICATION" | "LOGIN_VERIFICATION" }) {
+export function VerifyOTPForm({
+  type = "LOGIN_VERIFICATION",
+}: {
+  type?: "EMAIL_VERIFICATION" | "LOGIN_VERIFICATION";
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -23,43 +27,24 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
   const [otp, setOtp] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const {
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setValue,
-    setError,
-  } = useForm<VerifyOtpRequest>({
+  const { setValue, setError } = useForm({
     resolver: zodResolver(verifyOtpSchema),
-    defaultValues: {
-      email,
-      type,
-      code: "",
-    },
+    defaultValues: { email, type, code: "" },
   });
 
   const verifyMutation = useMutation({
     mutationFn: async (data: VerifyOtpRequest) => {
-      if (type === "EMAIL_VERIFICATION") {
-        return await verifyOtp(data);
-      } else {
-        return await verifyLoginOtp(data);
-      }
+      if (type === "EMAIL_VERIFICATION") return await verifyOtp(data);
+      return await verifyLoginOtp(data);
     },
-    onSuccess: (data) => {
-      toast.success("Verification successful!", {
-        icon: <CheckCircle2 className="h-5 w-5" />,
-      });
-
-      if (type === "EMAIL_VERIFICATION") {
-        router.push("/login?verified=true");
-      } else {
-        router.push("/dashboard");
-      }
+    onSuccess: () => {
+      toast.success("Verification successful!", { icon: <CheckCircle2 className="h-4 w-4" /> });
+      router.push(type === "EMAIL_VERIFICATION" ? "/login?verified=true" : "/dashboard");
     },
-    onError: (error: any) => {
+    onError: (err: any) => {
       toast.error("Verification failed", {
-        description: error?.response?.data?.message || "Invalid OTP",
-        icon: <AlertCircle className="h-5 w-5" />,
+        description: err?.response?.data?.message || "Invalid OTP",
+        icon: <AlertCircle className="h-4 w-4" />,
       });
       setOtp("");
     },
@@ -68,14 +53,13 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
   const resendMutation = useMutation({
     mutationFn: () => sendOtp({ email, type }),
     onSuccess: () => {
-      toast.success("OTP sent!", {
-        description: "Check your email for the new code.",
-      });
+      toast.success("OTP sent!", { description: "Check your email for the new code." });
       setResendCooldown(60);
+      setOtp("");
     },
-    onError: (error: any) => {
+    onError: (err: any) => {
       toast.error("Failed to resend OTP", {
-        description: error?.response?.data?.message || "Please try again later.",
+        description: err?.response?.data?.message || "Please try again later.",
       });
     },
   });
@@ -87,82 +71,50 @@ export function VerifyOTPForm({ type = "LOGIN_VERIFICATION" }: { type?: "EMAIL_V
     }
   }, [resendCooldown]);
 
+  useEffect(() => { setValue("code", otp); }, [otp, setValue]);
+
   useEffect(() => {
-    setValue("code", otp);
-  }, [otp, setValue]);
-
-  const onSubmit = async (data: VerifyOtpRequest) => {
-    console.log("📤 Sending to API:", data); // What are we sending?
-
-    if (data.code.length !== 6) {
-      setError("code", { message: "Please enter the 6-digit code" });
-      return;
+    if (otp.length === 6) {
+      const timer = setTimeout(() => {
+        verifyMutation.mutate({ email, code: otp, type });
+      }, 200);
+      return () => clearTimeout(timer);
     }
-
-    try {
-      await verifyMutation.mutateAsync(data);
-    } catch (err: any) {
-      console.log("❌ Error response:", err.response?.data); // What error?
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp, email, type]);
 
   return (
-    <Card>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-6 pt-6">
-          {/* Info */}
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">
-              We've sent a 6-digit code to
-            </p>
-            <p className="font-medium">{email}</p>
-          </div>
+    <div className="space-y-4">
+      <OtpInput value={otp} onChange={setOtp} isLoading={verifyMutation.isPending} />
 
-          {/* OTP Input */}
-          <OtpInput
-            value={otp}
-            onChange={setOtp}
-            error={errors.code?.message}
-          />
+      {verifyMutation.isPending && (
+        <div className="flex items-center justify-center gap-2 text-[15px] text-indigo-600">
+          <RefreshCw className="h-3 w-3 animate-spin" /> Verifying...
+        </div>
+      )}
 
-          {/* Resend OTP */}
-          <div className="text-center">
-            {resendCooldown > 0 ? (
-              <p className="text-sm text-gray-500">
-                Resend code in {resendCooldown}s
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={() => resendMutation.mutate()}
-                disabled={resendMutation.isPending}
-                className="text-sm text-black hover:underline inline-flex items-center gap-2 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`} />
-                Resend code
-              </button>
-            )}
-          </div>
-        </CardContent>
-
-        <CardFooter className="flex flex-col gap-4">
-          <Button
-            type="submit"
-            className="w-full"
-            loading={isSubmitting || verifyMutation.isPending}
-            disabled={isSubmitting || verifyMutation.isPending || otp.length !== 6}
+      <div className="flex justify-center">
+        {resendCooldown > 0 ? (
+          <span className="text-[15px] text-slate-500">Resend code in {resendCooldown}s</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => resendMutation.mutate()}
+            disabled={resendMutation.isPending}
+            className="inline-flex items-center gap-1.5 text-[15px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
           >
-            Verify & Continue
-          </Button>
+            <RefreshCw className={`h-3 w-3 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+            {resendMutation.isPending ? "Sending..." : "Resend Code"}
+          </button>
+        )}
+      </div>
 
-          <Link
-            href="/login"
-            className="text-sm text-center text-gray-600 hover:text-black transition-colors"
-          >
-            Back to login
-          </Link>
-        </CardFooter>
-      </form>
-    </Card>
+      <Link
+        href="/login"
+        className="mx-auto flex w-fit items-center gap-1 text-[18px] font-medium text-slate-600 hover:text-slate-900"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to login
+      </Link>
+    </div>
   );
 }

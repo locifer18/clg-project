@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  User, Mail, Phone, Lock, Eye, EyeOff,
+  AlertCircle, CheckCircle, ArrowRight,
+} from 'lucide-react';
+
 import { AuthInput } from '@/components/(auth)/AuthInput';
 import { registerSchema } from '@/lib/validation';
 import { RegisterFormData } from '@/types';
@@ -12,9 +18,20 @@ import { AuthButton } from '@/components/(auth)/AuthButton';
 import { useRegister } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+const fieldVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.05 * i, duration: 0.35, ease: 'easeOut' },
+  }),
+};
+
 export default function RegisterPage() {
   const router = useRouter();
-  const { mutate: registerUser, isPending: isRegisterPending } = useRegister(); const [error, setError] = useState<string>('');
+  const { mutate: registerUser, isPending: isRegisterPending } = useRegister();
+
+  const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -22,151 +39,205 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
   });
 
   const password = watch('password');
 
-
   const onSubmit = async (data: RegisterFormData) => {
-    try {
-      setError('');
+    setError('');
+    setSuccessMessage('');
 
-      registerUser(data, {
-        onSuccess: (response) => {
-          setSuccessMessage('✓ Account created! Redirecting to verification...');
-          setTimeout(() => {
-            router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
-          }, 1500);
-        },
-        onError: (err: any) => {
-          const errorMsg = err.response?.data?.message || 'Registration failed';
-          setError(errorMsg);
-          toast.error(errorMsg);
-        },
-      });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
-    }
+    registerUser(data, {
+      onSuccess: () => {
+        setSuccessMessage('Account created successfully! Redirecting...');
+        toast.success('Account created successfully!');
+        setTimeout(() => {
+          router.push(
+            `/verify-email?email=${encodeURIComponent(data.email)}&type=EMAIL_VERIFICATION`
+          );
+        }, 1600);
+      },
+      onError: (err: any) => {
+        const errorMsg =
+          err.response?.data?.message || 'Registration failed. Please try again.';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      },
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Full Name */}
-      <AuthInput
-        label="Full Name"
-        type="text"
-        placeholder="John Doe"
-        error={errors.name}
-        {...register('name')}
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Fields */}
+      <div className="space-y-2.5">
+        {[
+          {
+            key: 'name',
+            el: (
+              <AuthInput
+                label="Full name"
+                placeholder="Jane Doe"
+                icon={<User className="h-4 w-4 text-slate-400" />}
+                error={errors.name}
+                {...register('name')}
+              />
+            ),
+          },
+          {
+            key: 'email',
+            el: (
+              <AuthInput
+                label="Email"
+                placeholder="you@example.com"
+                icon={<Mail className="h-4 w-4 text-slate-400" />}
+                error={errors.email}
+                {...register('email')}
+              />
+            ),
+          },
+          {
+            key: 'phone',
+            el: (
+              <AuthInput
+                label="Phone"
+                placeholder="+1 555 000 0000"
+                icon={<Phone className="h-4 w-4 text-slate-400" />}
+                error={errors.phone}
+                {...register('phone')}
+              />
+            ),
+          },
+          {
+            key: 'password',
+            el: (
+              <AuthInput
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                icon={<Lock className="h-4 w-4 text-slate-400" />}
+                error={errors.password}
+                showPassword={showPassword}
+                onTogglePassword={() => setShowPassword(!showPassword)}
+                toggleIcon={
+                  showPassword ? (
+                    <EyeOff className="h-4 w-4 text-slate-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-slate-400" />
+                  )
+                }
+                {...register('password')}
+              />
+            ),
+          },
+        ].map((f, i) => (
+          <motion.div
+            key={f.key}
+            custom={i}
+            initial="hidden"
+            animate="show"
+            variants={fieldVariants}
+          >
+            {f.el}
+          </motion.div>
+        ))}
 
-      {/* Email */}
-      <AuthInput
-        label="Email Address"
-        type="email"
-        placeholder="you@example.com"
-        error={errors.email}
-        {...register('email')}
-      />
+        {/* Password strength (compact, animated) */}
+        <AnimatePresence initial={false}>
+          {password && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <PasswordStrength password={password} />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Phone */}
-      <AuthInput
-        label="Phone Number (Optional)"
-        type="tel"
-        placeholder="+1 (555) 123-4567"
-        error={errors.phone}
-        {...register('phone')}
-      />
+        <motion.div custom={4} initial="hidden" animate="show" variants={fieldVariants}>
+          <AuthInput
+            label="Confirm password"
+            type="password"
+            placeholder="••••••••"
+            icon={<Lock className="h-4 w-4 text-slate-400" />}
+            error={errors.confirmPassword}
+            {...register('confirmPassword')}
+          />
+        </motion.div>
+      </div>
 
-      {/* Password */}
-      <AuthInput
-        label="Password"
-        type="password"
-        placeholder="Min 12 characters with uppercase, number & symbol"
-        error={errors.password}
-        showPassword={showPassword}
-        onTogglePassword={() => setShowPassword(!showPassword)}
-        {...register('password')}
-      />
+      {/* Terms */}
+      <div className="space-y-1">
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            {...register('agreeToTerms')}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/40"
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            I agree to the{' '}
+            <a className="font-medium text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a className="font-medium text-indigo-600 hover:text-indigo-700 underline-offset-2 hover:underline">
+              Privacy Policy
+            </a>
+            .
+          </span>
+        </label>
+        {errors.agreeToTerms && (
+          <div className="flex items-center gap-1.5 text-[11px] text-rose-600 pl-6">
+            <AlertCircle className="h-3 w-3" />
+            {errors.agreeToTerms.message as string}
+          </div>
+        )}
+      </div>
 
-      {/* Password Strength */}
-      {password && <PasswordStrength password={password} />}
+      {/* Messages */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="flex items-start gap-2 rounded-xl border border-rose-200/70 bg-rose-50/80 px-3 py-2.5 backdrop-blur"
+          >
+            <AlertCircle className="h-4 w-4 mt-0.5 text-rose-600 shrink-0" />
+            <p className="text-xs leading-relaxed text-rose-700">{error}</p>
+          </motion.div>
+        )}
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="flex items-start gap-2 rounded-xl border border-emerald-200/70 bg-emerald-50/80 px-3 py-2.5 backdrop-blur"
+          >
+            <CheckCircle className="h-4 w-4 mt-0.5 text-emerald-600 shrink-0" />
+            <p className="text-xs leading-relaxed text-emerald-700">{successMessage}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Confirm Password */}
-      <AuthInput
-        label="Confirm Password"
-        type="password"
-        placeholder="Re-enter your password"
-        error={errors.confirmPassword}
-        {...register('confirmPassword')}
-      />
-
-      {/* Terms & Conditions */}
-      <label className="flex items-start gap-3 cursor-pointer group">
-        <input
-          type="checkbox"
-          {...register('agreeToTerms')}
-          className="w-5 h-5 mt-0.5 rounded border-2 border-slate-300 dark:border-slate-600 cursor-pointer accent-blue-600"
-        />
-        <span className="text-sm text-slate-600 dark:text-slate-400">
-          I agree to the{' '}
-          <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
-            Privacy Policy
-          </a>
-        </span>
-      </label>
-      {errors.agreeToTerms && (
-        <p className="text-sm text-red-600 dark:text-red-400">{errors.agreeToTerms.message}</p>
-      )}
-
-      {/* Error message */}
-      {error && <ErrorMessage message={error} />}
-
-      {/* Success message */}
-      {successMessage && <SuccessMessage message={successMessage} />}
-
-      {/* Submit button */}
-      <AuthButton isLoading={isRegisterPending} type="submit">
-        Create Account
-      </AuthButton>
-
-      {/* Already have account */}
-      <p className="text-center text-sm text-slate-600 dark:text-slate-400">
-        Already have an account?{' '}
-        <a href="/login" className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
-          Sign in
-        </a>
-      </p>
+      {/* Submit */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <AuthButton type="submit" isLoading={isRegisterPending} className="group w-full">
+          <span className="inline-flex items-center justify-center gap-2">
+            Create Account
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </AuthButton>
+      </motion.div>
     </form>
-  );
-}
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
-      <svg className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-      </svg>
-      <p className="text-sm font-medium text-red-800 dark:text-red-300">{message}</p>
-    </div>
-  );
-}
-
-function SuccessMessage({ message }: { message: string }) {
-  return (
-    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex gap-3">
-      <svg className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-      <p className="text-sm font-medium text-green-800 dark:text-green-300">{message}</p>
-    </div>
   );
 }

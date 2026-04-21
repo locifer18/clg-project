@@ -12,7 +12,6 @@ export const POST = asyncHandler(async (req: Request) => {
     throw new ValidationError(validation.error.issues[0].message);
   }
 
-  // ✅ Now it's safe + typed
   const typedBody: ResetPasswordRequest = validation.data;
 
   const result = await resetPasswordService(typedBody);

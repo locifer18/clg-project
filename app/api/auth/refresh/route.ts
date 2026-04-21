@@ -1,4 +1,4 @@
-import { asyncHandler, AuthenticationError, successResponse } from "@/lib/errors";
+import { asyncHandler, AuthenticationError } from "@/lib/errors";
 import { refreshTokenService } from "@/services/AuthSerive";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";

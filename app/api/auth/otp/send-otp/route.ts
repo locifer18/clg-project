@@ -1,6 +1,6 @@
 import { asyncHandler, successResponse, ValidationError } from "@/lib/errors";
 import { sendOtpService } from "@/services/OtpServise";
-// import { sendOtpSchema } from "@/lib/validation";
+import { sendOtpSchema } from "@/lib/validation";
 import { SendOtpRequest } from "@/types";
 
 export const POST = asyncHandler(async (req: Request) => {

@@ -18,7 +18,17 @@ export interface RegisterRequest {
 
 export interface LoginRequest {
     email: string;
-    password: string; // OTP
+    password: string;
+}
+
+export interface LoginOtpRequest {
+    email: string;
+}
+
+export interface VerifyLoginOtpRequest {
+    email: string;
+    code: string;
+    type: "LOGIN_VERIFICATION";
 }
 
 export interface RefreshTokenRequest {

@@ -1,11 +1,11 @@
 import { asyncHandler, successResponse, ValidationError } from "@/lib/errors";
 import { registerUser } from "@/services/AuthSerive";
-import { registerSchema } from "@/lib/validation";
+import { registerApiSchema } from "@/lib/validation";
 
 export const POST = asyncHandler(async (req: Request) => {
   const body = await req.json();
   
-  const validation = registerSchema.safeParse(body);
+  const validation = registerApiSchema.safeParse(body);
   if (!validation.success) {
     throw new ValidationError(validation.error.issues[0].message);
   }

@@ -1,7 +1,7 @@
-// app/dashboard/page.tsx
 'use client';
 
-import { ProtectedRoute } from '@/components/(auth)/ProtectedRoute';
+import { Header } from '@/components/(layout)/Header';
+// import { ProtectedRoute } from '@/components/(auth)/ProtectedRoute';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Link from 'next/link';
 
@@ -9,7 +9,7 @@ function DashboardContent() {
   const { data: userResponse, isLoading } = useCurrentUser();
   const user = userResponse?.data;
   console.log('user', user);
-  
+
   if (isLoading) {
     return <div>Loading dashboard...</div>;
   }
@@ -175,8 +175,9 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    // <ProtectedRoute>
+    <>
+      <Header />
       <DashboardContent />
-    // </ProtectedRoute>
+    </>
   );
 }

@@ -39,6 +39,7 @@ export const verifyLoginOtp = async (
 export const register = async (
   data: RegisterFormData
 ): Promise<ApiResponse<{ message: string; nextStep: string }>> => {
+
   const { name, email, password, phone } = data;
   
   const res = await api.post<ApiResponse<{ message: string; nextStep: string }>>(
@@ -85,7 +86,6 @@ export const getMe = async (): Promise<ApiResponse<UserWithoutPassword>> => {
 };
 
 // ================= SESSION =================
-// ok bro i got it now what is the next thing bro i think we need to test our our auth system bro 
 // LOGOUT
 export const logout = async (): Promise<ApiResponse> => {
   const res = await api.post<ApiResponse>("/auth/logout");

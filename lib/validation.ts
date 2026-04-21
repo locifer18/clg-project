@@ -68,6 +68,13 @@ export const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export const registerApiSchema = z.object({
+  name: nameSchema,
+  email: emailSchema,
+  password: passwordSchema,
+  phone: phoneSchema.optional(),
+});
+
 export const loginPasswordSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
