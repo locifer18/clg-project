@@ -1,0 +1,13 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+
+scenarios:
+  - name: "Get Current User"
+    flow:
+      - get:
+          url: "/api/auth/me"
+          headers:
+            Cookie: "accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW83OW1hbjUwMDAwbThyYXAybDkxaGx4IiwiZW1haWwiOiJyYWp2ZXJrYW5kYUBnbWFpbC5jb20iLCJyb2xlIjoiQ1VTVE9NRVIiLCJzZXNzaW9uSWQiOiJjbW84amR1ZDQwMDBhemdyYWk2aWMyOXgyIiwidG9rZW5WZXJzaW9uIjoyLCJpYXQiOjE3NzY3NzA2NzQsImV4cCI6MTc3NzM3NTQ3NH0.armLHlKI4ZBcJfVaAmXlX7B-9o1NT9gxs8etFZTcBJQ"

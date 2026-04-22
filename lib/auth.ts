@@ -20,7 +20,6 @@ export async function getUser() {
 
     if (!token) return null;
 
-    // ✅ 3. Verify token
     const user = await getUserFromToken(token);
 
     return user;

@@ -15,6 +15,7 @@ import { loginPasswordSchema } from '@/lib/validation';
 import { LoginFormData, VerifyOtpRequest } from '@/types';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -122,9 +123,9 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end">
-              <a href="/forgot-password" className="text-[12px] font-medium text-indigo-600 hover:underline">
+              <Link href="/forgot-password" className="text-[12px] font-medium text-indigo-600 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {error && <ErrorMessage message={error} />}
@@ -150,7 +151,7 @@ export default function LoginPage() {
 
             <p className="text-center text-[11px] text-slate-600 pt-1">
               Don’t have an account?{' '}
-              <a href="/register" className="font-semibold text-indigo-600 hover:underline">Sign up</a>
+              <Link href="/register" className="font-semibold text-indigo-600 hover:underline">Sign up</Link>
             </p>
           </motion.form>
         ) : (

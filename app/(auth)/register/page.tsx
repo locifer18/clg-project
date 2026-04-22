@@ -17,6 +17,7 @@ import { PasswordStrength } from '@/components/(auth)/PasswordStrenght';
 import { AuthButton } from '@/components/(auth)/AuthButton';
 import { useRegister } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 const fieldVariants = {
   hidden: { opacity: 0, y: 8 },
@@ -237,6 +238,10 @@ export default function RegisterPage() {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </span>
         </AuthButton>
+        <p className="text-center text-[11px] text-slate-600 pt-3">
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-indigo-600 hover:underline">Sign In</Link>
+        </p>
       </motion.div>
     </form>
   );

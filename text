@@ -51,11 +51,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        // const res = 
-        await refreshApi.post("/auth/refresh", {});
+        const res = await refreshApi.post("/auth/refresh", {});
         // const newToken = res.data?.data?.accessToken || res.data?.accessToken;
 
-        
         // if (!newToken) {
         //   throw new Error("No access token in response");
         // }
