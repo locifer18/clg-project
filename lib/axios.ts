@@ -55,7 +55,6 @@ api.interceptors.response.use(
         await refreshApi.post("/auth/refresh", {});
         // const newToken = res.data?.data?.accessToken || res.data?.accessToken;
 
-        
         // if (!newToken) {
         //   throw new Error("No access token in response");
         // }
