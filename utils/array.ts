@@ -208,7 +208,6 @@ export function paginate<T>(array: T[], page: number, pageSize: number): T[] {
   return array.slice(start, end);
 }
 
-
 /**
  * Move item in array
  * @example moveItem([1, 2, 3, 4], 0, 2) // [2, 3, 1, 4]
