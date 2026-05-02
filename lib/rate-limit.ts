@@ -1,112 +1,107 @@
 // lib/rate-limit.ts
 /**
- * Simple in-memory rate limiting
- * For production, use Redis or similar
+ * Redis-based rate limiting for production
+ * Distributed across all server instances
  */
 
-interface RateLimitStore {
-    [key: string]: {
-        count: number;
-        resetTime: number;
-    };
-}
-
-const store: RateLimitStore = {};
+import { getRedis } from './redis';
+import { RateLimitError } from './errors';
+import { logger } from './logger';
 
 /**
- * Check if request is rate limited
+ * Check if request is rate limited using Redis
  * Returns true if allowed, false if rate limited
  */
-export function checkRateLimit(
-    key: string,
-    limit: number,
-    windowMs: number = 60 * 1000 // 1 minute default
-): boolean {
-    const now = Date.now();
-    const record = store[key];
-
-    // First request
-    if (!record) {
-        store[key] = { count: 1, resetTime: now + windowMs };
-        return true;
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number = 60 * 1000 // 1 minute default
+): Promise<boolean> {
+  try {
+    const redis = await getRedis();
+    const redisKey = `rate-limit:${key}`;
+    
+    const current = await redis.incr(redisKey);
+    
+    if (current === 1) {
+      // First request in window, set expiry
+      const windowSeconds = Math.ceil(windowMs / 1000);
+      await redis.expire(redisKey, windowSeconds);
     }
-
-    // Window expired, reset
-    if (now > record.resetTime) {
-        store[key] = { count: 1, resetTime: now + windowMs };
-        return true;
-    }
-
-    // Window active, check limit
-    if (record.count < limit) {
-        record.count++;
-        return true;
-    }
-
-    // Rate limited
-    return false;
+    
+    return current <= limit;
+  } catch (error) {
+    logger.error('Rate limit check failed, allowing request:', { key, error: error instanceof Error ? error.message : 'Unknown' }, error as Error);
+    // On error, allow the request (fail open)
+    return true;
+  }
 }
 
 /**
- * Get remaining attempts
+ * Check rate limit and throw error if exceeded
  */
-export function getRateLimitInfo(
-    key: string,
-    limit: number,
-    windowMs: number = 60 * 1000
-): {
-    remaining: number;
-    resetTime: number;
-    isLimited: boolean;
-} {
-    const now = Date.now();
-    const record = store[key];
+export async function enforceRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number = 60 * 1000
+): Promise<void> {
+  const allowed = await checkRateLimit(key, limit, windowMs);
+  
+  if (!allowed) {
+    logger.warn('Rate limit exceeded', { key, limit });
+    throw new RateLimitError('Too many requests. Please try again later.');
+  }
+}
 
-    if (!record || now > record.resetTime) {
-        return {
-            remaining: limit,
-            resetTime: now + windowMs,
-            isLimited: false,
-        };
-    }
-
-    const remaining = Math.max(0, limit - record.count);
+/**
+ * Get rate limit info
+ */
+export async function getRateLimitInfo(
+  key: string,
+  limit: number,
+  windowMs: number = 60 * 1000
+): Promise<{
+  remaining: number;
+  resetTime: number;
+  isLimited: boolean;
+}> {
+  try {
+    const redis = await getRedis();
+    const redisKey = `rate-limit:${key}`;
+    
+    const ttl = await redis.ttl(redisKey);
+    const current = await redis.get(redisKey);
+    const count = parseInt(current || '0');
+    
+    const remaining = Math.max(0, limit - count);
+    const resetTime = ttl > 0 ? Date.now() + (ttl * 1000) : Date.now() + windowMs;
+    
     return {
-        remaining,
-        resetTime: record.resetTime,
-        isLimited: remaining === 0,
+      remaining,
+      resetTime,
+      isLimited: remaining === 0,
     };
+  } catch (error) {
+    logger.error('Failed to get rate limit info:', { key, error: error instanceof Error ? error.message : 'Unknown' }, error as Error);
+    return {
+      remaining: limit,
+      resetTime: Date.now() + windowMs,
+      isLimited: false,
+    };
+  }
 }
 
 /**
  * Reset rate limit for a key
  */
-export function resetRateLimit(key: string): void {
-    delete store[key];
-}
-
-/**
- * Clear all rate limits
- */
-export function clearAllRateLimits(): void {
-    Object.keys(store).forEach((key) => delete store[key]);
-}
-
-/**
- * Cleanup expired records (run periodically)
- */
-export function cleanupExpiredRateLimits(): number {
-    const now = Date.now();
-    let cleaned = 0;
-
-    Object.entries(store).forEach(([key, record]) => {
-        if (now > record.resetTime) {
-            delete store[key];
-            cleaned++;
-        }
-    });
-
-    return cleaned;
+export async function resetRateLimit(key: string): Promise<void> {
+  try {
+    const redis = await getRedis();
+    await redis.del(`rate-limit:${key}`);
+    logger.debug('Rate limit reset', { key });
+  } catch (error) {
+    logger.error('Failed to reset rate limit:', { key, error: error instanceof Error ? error.message : 'Unknown' }, error as Error);
+  }
 }
 
 /**
@@ -140,8 +135,8 @@ const rateFunctions = {
     checkRateLimit,
     getRateLimitInfo,
     resetRateLimit,
-    clearAllRateLimits,
-    cleanupExpiredRateLimits,
+    // clearAllRateLimits,
+    // cleanupExpiredRateLimits,
     rateLimitConfigs,
     getRateLimitKey,
 };

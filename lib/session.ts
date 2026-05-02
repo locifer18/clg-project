@@ -1,12 +1,15 @@
 // lib/session.ts
 import { prisma } from "./db";
+import { logger } from "./logger";
+import { SESSION_EXPIRY_MS } from "@/constants/security";
 
 export interface SessionData {
   userId: string;
   accessToken: string;
+  refreshToken?: string;
   userAgent?: string;
   ipAddress?: string;
-  expiresAt: Date;
+  expiresAt?: Date;
 }
 
 /**
@@ -16,6 +19,7 @@ export async function createSession(
   userId: string,
   accessToken: string,
   options?: {
+    refreshToken?: string;
     userAgent?: string;
     ipAddress?: string;
     expiresAt?: Date;
@@ -26,15 +30,22 @@ export async function createSession(
       data: {
         userId,
         accessToken,
+        refreshToken: options?.refreshToken,
         userAgent: options?.userAgent,
         ipAddress: options?.ipAddress,
-        expiresAt: options?.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        expiresAt: options?.expiresAt || new Date(Date.now() + SESSION_EXPIRY_MS),
       },
+    });
+
+    logger.debug('Session created', {
+      sessionId: session.id,
+      userId,
+      ipAddress: options?.ipAddress,
     });
 
     return session;
   } catch (error) {
-    console.error("Failed to create session:", error);
+    logger.error("Failed to create session:", {}, error as Error);
     return null;
   }
 }
@@ -54,12 +65,13 @@ export async function getSessionByToken(accessToken: string): Promise<any | null
     // Check if session expired
     if (new Date() > session.expiresAt) {
       await prisma.session.delete({ where: { id: session.id } });
+      logger.warn('Session expired', { sessionId: session.id });
       return null;
     }
 
     return session;
   } catch (error) {
-    console.error("Failed to get session:", error);
+    logger.error("Failed to get session:", {}, error as Error);
     return null;
   }
 }
@@ -70,22 +82,56 @@ export async function getSessionByToken(accessToken: string): Promise<any | null
 export async function getUserSessions(userId: string): Promise<any[]> {
   try {
     const sessions = await prisma.session.findMany({
-      where: { userId },
+      where: {
+        userId,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
       select: {
         id: true,
-        accessToken: true,
         userAgent: true,
         ipAddress: true,
         createdAt: true,
         expiresAt: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    // Filter out expired sessions
-    return sessions.filter((session) => new Date() < session.expiresAt);
+    return sessions;
   } catch (error) {
-    console.error("Failed to get user sessions:", error);
+    logger.error("Failed to get user sessions:", { userId }, error as Error);
     return [];
+  }
+}
+
+/**
+ * Revoke a session
+ */
+export async function revokeSession(sessionId: string): Promise<boolean> {
+  try {
+    await prisma.session.delete({ where: { id: sessionId } });
+    logger.info('Session revoked', { sessionId });
+    return true;
+  } catch (error) {
+    logger.error('Failed to revoke session:', { sessionId }, error as Error);
+    return false;
+  }
+}
+
+/**
+ * Revoke all sessions for a user
+ */
+export async function revokeAllSessions(userId: string): Promise<boolean> {
+  try {
+    await prisma.session.deleteMany({ where: { userId } });
+    logger.info('All sessions revoked', { userId });
+    return true;
+  } catch (error) {
+    logger.error('Failed to revoke all sessions:', { userId }, error as Error);
+    return false;
   }
 }
 
