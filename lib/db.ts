@@ -9,7 +9,6 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClientSingleton | undefined;
 };
 
-
 /**
  * Create Prisma client with proper configuration
  * Reuses instance in development to avoid "too many connections" errors
