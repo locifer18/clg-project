@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, code } = body;
 
+
     // Get request metadata
     const userAgent = request.headers.get('user-agent') || undefined;
     const forwarded = request.headers.get('x-forwarded-for');
