@@ -2,6 +2,7 @@
 
 ## Week 1: Security Hardening (Most Important)
 
+
 ### 1️⃣ FIX HTTP-ONLY COOKIES (CRITICAL)
 
 Create file: `app/api/auth/login/verify-otp/route.ts` - Update to set HTTP-Only cookies:
