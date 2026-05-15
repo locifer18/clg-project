@@ -6,7 +6,6 @@
 
 Create file: `app/api/auth/login/verify-otp/route.ts` - Update to set HTTP-Only cookies:
 
-
 ```typescript
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
