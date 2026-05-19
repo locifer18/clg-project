@@ -6,7 +6,7 @@ import { verifyToken } from './jwt';
  * Works with both NextAuth sessions and JWT tokens
  */
 import { headers, cookies } from "next/headers";
-// get user
+
 export async function getUser() {
   try {
     const headerList = await headers();
